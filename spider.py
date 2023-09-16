@@ -1,6 +1,6 @@
 #!/bin/python3
 import requests
-import sys
+import argparse
 import os
 from bs4 import BeautifulSoup
 
@@ -31,12 +31,24 @@ def spider(url: str, path: str):
 		img_content = requests.get(image).content
 		open(path + image.split('/')[-1], 'wb').write(img_content) # write in binary the content of the image
 
+def parse_arguments():
+	desc = "The spider program allow you to extract all the images from a website, \
+			recursively, by providing a url as a parameter."
+	parser = argparse.ArgumentParser(description=desc)
+	parser.add_argument("-p", "--path", help="indicates the path where the downloaded files will be saved. If not specified, './data/' will be used.")
+	parser.add_argument("URL", help="URL to scrape")
+	return	(parser.parse_args())
+
+def getPath(path):
+	if not path:
+		return ("./data/")
+	if path.endswith('/'):
+		return (path)
+	else:
+		return (path + '/')
+
 if __name__ == "__main__":
-	try:
-		assert len(sys.argv) > 1, "Usage: ./spider.py -option <url>"
-	except AssertionError as Error:
-		print(Error)
-		exit(1)
-	url = sys.argv[1]
-	path = "./data/"
+	args = parse_arguments()
+	url = args.URL
+	path = getPath(args.path)
 	spider(url, path)
