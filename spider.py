@@ -5,6 +5,7 @@ import os
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import time
+import signal
 
 RED = "\033[0;31m"
 BLUE = "\033[0;34m"
@@ -35,6 +36,7 @@ ascii_header = """
 """
 
 g_downloaded_files = set()
+g_img_captured = 0
 
 def getResponse(url: str):
 	try:
@@ -65,13 +67,17 @@ def isImageElement(img_path): # check for extension of the image path
 			return (True)
 	return (False)
 
-def displayStatImage(image_url: str, img_content: bytes):
-	img_size = len(img_content)
-	print(f"{BOLD}{LIGHT_CYAN}|- Download ", end="")
-	print(f"{YELLOW}{(img_size / 1000):.2f} kb -| ", end="")
-	print(f"{LIGHT_GREEN}{image_url}{END}")
+def displayStatImage(image_url: str, img_content: bytes, img_name=None):
+	if img_name is not None:
+		print(f"{YELLOW}|- {img_name} -|{LIGHT_CYAN} Already downloaded{END}")
+	else:
+		img_size = len(img_content)
+		print(f"{LIGHT_CYAN}|- Download ", end="")
+		print(f"{YELLOW}{(img_size / 1000):.2f} kb -| ", end="")
+		print(f"{LIGHT_GREEN}{image_url}{END}")
 
 def downloadImage(image_url, path):
+	global g_img_captured
 	if image_url in g_downloaded_files: # check cache
 		return
 	img_response = requests.head(image_url)
@@ -85,10 +91,15 @@ def downloadImage(image_url, path):
 		img_path = os.path.join(path, img_name)
 		if not isImageElement(img_path) or os.path.isdir(img_path):
 			return
+		if os.path.exists(img_path): # If image is already downloaded
+			displayStatImage(image_url, img_content, img_name)
+			g_downloaded_files.add(image_url)
+			return
 		with open(img_path, 'wb') as img_file:  # write in binary the content of the image
 			img_file.write(img_content)
 		displayStatImage(image_url, img_content)
 		g_downloaded_files.add(image_url)
+		g_img_captured += 1 # different variable because cache contain urls of precedent images captured
 
 def spider(url: str, path: str, depth_level: int):
 	if (depth_level == 0):
@@ -109,7 +120,7 @@ def spider(url: str, path: str, depth_level: int):
 				href = urljoin(url, href)
 			if href.startswith("#"):
 				continue
-			if urlparse(href).netloc == urlparse(url).netloc:
+			if urlparse(href).netloc == urlparse(url).netloc: # avoid scraping another domain name
 				spider(href, path, depth_level - 1)
 
 def parse_arguments():
@@ -131,7 +142,7 @@ def getPath(path):
 		return (path + '/')
 
 if __name__ == "__main__":
-	print(f"{LIGHT_GREEN}{BOLD}{ascii_header}{END}")
+	print(f"{LIGHT_GREEN}{ascii_header}{END}")
 	start_time = time.time()
 
 	args = parse_arguments()
@@ -146,5 +157,5 @@ if __name__ == "__main__":
 	spider(url, path, depth_level)
 
 	end_time = time.time()
-	print(f"{BOLD}{LIGHT_GREEN}| Scrapping time: {round(end_time - start_time, 3)} seconds |", end="")
-	print(f"{LIGHT_PURPLE}| Images captured: {len(g_downloaded_files)} |{END}")
+	print(f"{YELLOW}| Scrapping time: {round(end_time - start_time, 3)} seconds |", end="")
+	print(f"{LIGHT_PURPLE}| Images captured: {g_img_captured} |{END}")
