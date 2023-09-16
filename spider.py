@@ -4,6 +4,7 @@ import argparse
 import os
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
+import time
 
 def getResponse(url: str):
 	try:
@@ -21,13 +22,21 @@ def getImgSrc(images, url):
 	return(img_src)
 
 def isValidExtension(img_response):
-	valid_extension = ["jpg", "jpeg", "png", "bmp", "gif"]
+	valid_mime_types = ["image/jpg", "image/jpeg", "image/png", "image/bmp", "image/gif"]
 	content_type = img_response.headers.get('content-type')
-	if content_type.startswith("image/"):
-		extension = content_type.split("/")[1]
-		if extension in valid_extension:
-			return (True)
+	if content_type in valid_mime_types:
+		return (True)
 	return (False)
+
+def downloadImage(image_url, path):
+	img_response = requests.head(image_url)
+	if isValidExtension(img_response):
+		img_content = requests.get(image_url).content
+		img_name = os.path.basename(urlparse(image_url).path)  # To avoid url params
+		img_path = os.path.join(path, img_name)
+		if os.path.isdir(img_path):
+			return
+		open(img_path, 'wb').write(img_content)  # write in binary the content of the image
 
 def spider(url: str, path: str, depth_level: int):
 	if (depth_level == 0):
@@ -37,15 +46,8 @@ def spider(url: str, path: str, depth_level: int):
 	soup = BeautifulSoup(html_data, 'html.parser')
 	images =  soup.find_all('img')
 	img_src = getImgSrc(images, url) # get url of each image
-	if not os.path.exists(path): # create the directory path if it does not exist
-		os.makedirs(path)
-	
 	for image in img_src:
-		img_response = requests.get(image)
-		if isValidExtension(img_response):
-			img_content = requests.get(image).content
-			img_name = os.path.basename(urlparse(image).path) # To avoid url params
-			open(os.path.join(path, img_name), 'wb').write(img_content) # write in binary the content of the image
+		downloadImage(image, path)
 
 	links = soup.find_all('a')
 	for link in links:
@@ -76,8 +78,15 @@ def getPath(path):
 		return (path + '/')
 
 if __name__ == "__main__":
+	start_time = time.time()
+
 	args = parse_arguments()
 	url = args.URL
 	path = getPath(args.path)
-	depth_level = 3
+	depth_level = 2
+	if not os.path.exists(path): # create the directory path if it does not exist
+		os.makedirs(path)
 	spider(url, path, depth_level)
+
+	end_time = time.time()
+	print(f"Execution time: {round(end_time - start_time, 3)} seconds")
