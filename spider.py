@@ -26,7 +26,6 @@ def isValidExtension(img_response):
 	if content_type.startswith("image/"):
 		extension = content_type.split("/")[1]
 		if extension in valid_extension:
-			print(extension)
 			return (True)
 	return (False)
 
@@ -45,7 +44,8 @@ def spider(url: str, path: str, depth_level: int):
 		img_response = requests.get(image)
 		if isValidExtension(img_response):
 			img_content = requests.get(image).content
-			open(path + image.split('/')[-1], 'wb').write(img_content) # write in binary the content of the image
+			img_name = os.path.basename(urlparse(image).path) # To avoid url params
+			open(os.path.join(path, img_name), 'wb').write(img_content) # write in binary the content of the image
 
 	links = soup.find_all('a')
 	for link in links:
@@ -63,8 +63,9 @@ def parse_arguments():
 			recursively, by providing a url as a parameter."
 	parser = argparse.ArgumentParser(description=desc)
 	parser.add_argument("-p", "--path", help="indicates the path where the downloaded files will be saved. If not specified, './data/' will be used.")
+	parser.add_argument("-r", "--recursive", help="recursively downloads the images in a URL received as a parameter")
 	parser.add_argument("URL", help="URL to scrape")
-	return	(parser.parse_args())
+	return (parser.parse_args())
 
 def getPath(path):
 	if not path:
@@ -78,5 +79,5 @@ if __name__ == "__main__":
 	args = parse_arguments()
 	url = args.URL
 	path = getPath(args.path)
-	depth_level = 2
+	depth_level = 3
 	spider(url, path, depth_level)
