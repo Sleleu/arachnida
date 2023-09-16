@@ -5,20 +5,12 @@ import os
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import time
-import signal
+from signal import signal, SIGINT
 
-RED = "\033[0;31m"
-BLUE = "\033[0;34m"
-PURPLE = "\033[0;35m"
-CYAN = "\033[0;36m"
-LIGHT_RED = "\033[1;31m"
-LIGHT_GREEN = "\033[1;32m"
 YELLOW = "\033[1;33m"
-LIGHT_BLUE = "\033[1;34m"
 LIGHT_PURPLE = "\033[1;35m"
 LIGHT_CYAN = "\033[1;36m"
 LIGHT_GREEN = "\033[1;32m"
-BOLD = "\033[1m"
 END = "\033[0m"
 
 ascii_header = """
@@ -43,7 +35,7 @@ def getResponse(url: str):
 		response = requests.get(url)
 		return (response)
 	except:
-		print("Error: impossible to get a response from url")
+		print(f"Spider: cannot get a response from url: {url}")
 		exit(1)
 
 def getImgSrc(images, url):
@@ -101,6 +93,17 @@ def downloadImage(image_url, path):
 		g_downloaded_files.add(image_url)
 		g_img_captured += 1 # different variable because cache contain urls of precedent images captured
 
+def recursive_search(url: str, path: str, depth_level: int, soup: BeautifulSoup):
+	links = soup.find_all('a')
+	for link in links:
+		href = link.get('href')
+		if href:
+			if href.startswith("/"): # if the link is not absolute, make it absolute by joining it with the base URL
+				href = urljoin(url, href)
+			if not href.startswith("#"): # avoid fragment identifier
+				if urlparse(href).netloc == urlparse(url).netloc: # avoid scraping another domain name
+					spider(href, path, depth_level - 1) # Recursive call to explore the link
+
 def spider(url: str, path: str, depth_level: int):
 	if (depth_level == 0):
 		return
@@ -111,17 +114,7 @@ def spider(url: str, path: str, depth_level: int):
 	img_src = getImgSrc(images, url) # get url of each image
 	for image in img_src:
 		downloadImage(image, path)
-
-	links = soup.find_all('a')
-	for link in links:
-		href = link.get('href')
-		if href:
-			if href.startswith("/"):
-				href = urljoin(url, href)
-			if href.startswith("#"):
-				continue
-			if urlparse(href).netloc == urlparse(url).netloc: # avoid scraping another domain name
-				spider(href, path, depth_level - 1)
+	recursive_search(url, path, depth_level, soup)
 
 def parse_arguments():
 	desc = "The spider program allow you to extract all the images from a website, \
@@ -141,10 +134,21 @@ def getPath(path):
 	else:
 		return (path + '/')
 
+def displayEndStat():
+	end_time = time.time()
+	print(f"{YELLOW}| Scrapping time: {round(end_time - start_time, 3)} seconds |", end="")
+	print(f"{LIGHT_PURPLE}| Images captured: {g_img_captured} |{END}")
+
+def signalHandler(signum, _):
+	if signum == SIGINT:
+		print("")
+		displayEndStat()
+		exit(0)
+
 if __name__ == "__main__":
 	print(f"{LIGHT_GREEN}{ascii_header}{END}")
 	start_time = time.time()
-
+	signal(SIGINT, signalHandler)
 	args = parse_arguments()
 	url = args.URL
 	path = getPath(args.path)
@@ -155,7 +159,4 @@ if __name__ == "__main__":
 	if not os.path.exists(path): # create the directory path if it does not exist
 		os.makedirs(path)
 	spider(url, path, depth_level)
-
-	end_time = time.time()
-	print(f"{YELLOW}| Scrapping time: {round(end_time - start_time, 3)} seconds |", end="")
-	print(f"{LIGHT_PURPLE}| Images captured: {g_img_captured} |{END}")
+	displayEndStat()
