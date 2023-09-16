@@ -6,6 +6,20 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin
 import time
 
+RED = "\033[0;31m"
+BLUE = "\033[0;34m"
+PURPLE = "\033[0;35m"
+CYAN = "\033[0;36m"
+LIGHT_RED = "\033[1;31m"
+LIGHT_GREEN = "\033[1;32m"
+YELLOW = "\033[1;33m"
+LIGHT_BLUE = "\033[1;34m"
+LIGHT_PURPLE = "\033[1;35m"
+LIGHT_CYAN = "\033[1;36m"
+LIGHT_GREEN = "\033[1;32m"
+BOLD = "\033[1m"
+END = "\033[0m"
+
 ascii_header = """
   ██████  ██▓███   ██▓▓█████▄ ▓█████  ██▀███  
 ▒██    ▒ ▓██░  ██▒▓██▒▒██▀ ██▌▓█   ▀ ▓██ ▒ ██▒
@@ -51,8 +65,14 @@ def isImageElement(img_path): # check for extension of the image path
 			return (True)
 	return (False)
 
+def displayStatImage(image_url: str, img_content: bytes):
+	img_size = len(img_content)
+	print(f"{BOLD}{LIGHT_CYAN}|- Download ", end="")
+	print(f"{YELLOW}{(img_size / 1000):.2f} kb -| ", end="")
+	print(f"{LIGHT_GREEN}{image_url}{END}")
+
 def downloadImage(image_url, path):
-	if image_url in g_downloaded_files:
+	if image_url in g_downloaded_files: # check cache
 		return
 	img_response = requests.head(image_url)
 	if isValidExtension(img_response):
@@ -67,7 +87,7 @@ def downloadImage(image_url, path):
 			return
 		with open(img_path, 'wb') as img_file:  # write in binary the content of the image
 			img_file.write(img_content)
-		print_green(f"DOWNLOAD : {image_url}")
+		displayStatImage(image_url, img_content)
 		g_downloaded_files.add(image_url)
 
 def spider(url: str, path: str, depth_level: int):
@@ -97,7 +117,8 @@ def parse_arguments():
 			recursively, by providing a url as a parameter."
 	parser = argparse.ArgumentParser(description=desc)
 	parser.add_argument("-p", "--path", help="indicates the path where the downloaded files will be saved. If not specified, './data/' will be used.")
-	parser.add_argument("-r", "--recursive", help="recursively downloads the images in a URL received as a parameter")
+	parser.add_argument("-r", "--recursive", action="store_true", help="recursively downloads the images in a URL received as a parameter")
+	parser.add_argument("-l", "--max-depth", type=int, default=5, help="indicates the maximum depth level of the recursive download. Default is 5.")
 	parser.add_argument("URL", help="URL to scrape")
 	return (parser.parse_args())
 
@@ -109,20 +130,21 @@ def getPath(path):
 	else:
 		return (path + '/')
 
-def print_green(str):
-	print("\033[32m" + str + "\033[0m")
-
 if __name__ == "__main__":
-	print_green(ascii_header)
+	print(f"{LIGHT_GREEN}{BOLD}{ascii_header}{END}")
 	start_time = time.time()
 
 	args = parse_arguments()
 	url = args.URL
 	path = getPath(args.path)
-	depth_level = 3
+	if args.recursive:
+			depth_level = args.max_depth
+	else:
+		depth_level = 1
 	if not os.path.exists(path): # create the directory path if it does not exist
 		os.makedirs(path)
 	spider(url, path, depth_level)
 
 	end_time = time.time()
-	print(f"Execution time: {round(end_time - start_time, 3)} seconds")
+	print(f"{BOLD}{LIGHT_GREEN}| Scrapping time: {round(end_time - start_time, 3)} seconds |", end="")
+	print(f"{LIGHT_PURPLE}| Images captured: {len(g_downloaded_files)} |{END}")
