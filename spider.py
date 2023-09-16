@@ -3,6 +3,7 @@ import requests
 import argparse
 import os
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse, urljoin
 
 def getResponse(url: str):
 	try:
@@ -19,7 +20,19 @@ def getImgSrc(images, url):
 		img_src.append(requests.compat.urljoin(url, src)) # in case of non absolute image url in htmldata
 	return(img_src)
 
-def spider(url: str, path: str):
+def isValidExtension(img_response):
+	valid_extension = ["jpg", "jpeg", "png", "bmp", "gif"]
+	content_type = img_response.headers.get('content-type')
+	if content_type.startswith("image/"):
+		extension = content_type.split("/")[1]
+		if extension in valid_extension:
+			print(extension)
+			return (True)
+	return (False)
+
+def spider(url: str, path: str, depth_level: int):
+	if (depth_level == 0):
+		return
 	response = getResponse(url) # get response object from url
 	html_data = response.text
 	soup = BeautifulSoup(html_data, 'html.parser')
@@ -27,9 +40,23 @@ def spider(url: str, path: str):
 	img_src = getImgSrc(images, url) # get url of each image
 	if not os.path.exists(path): # create the directory path if it does not exist
 		os.makedirs(path)
+	
 	for image in img_src:
-		img_content = requests.get(image).content
-		open(path + image.split('/')[-1], 'wb').write(img_content) # write in binary the content of the image
+		img_response = requests.get(image)
+		if isValidExtension(img_response):
+			img_content = requests.get(image).content
+			open(path + image.split('/')[-1], 'wb').write(img_content) # write in binary the content of the image
+
+	links = soup.find_all('a')
+	for link in links:
+		href = link.get('href')
+		if href:
+			if href.startswith("/"):
+				href = urljoin(url, href)
+			if href.startswith("#"):
+				continue
+			if urlparse(href).netloc == urlparse(url).netloc:
+				spider(href, path, depth_level - 1)
 
 def parse_arguments():
 	desc = "The spider program allow you to extract all the images from a website, \
@@ -51,4 +78,5 @@ if __name__ == "__main__":
 	args = parse_arguments()
 	url = args.URL
 	path = getPath(args.path)
-	spider(url, path)
+	depth_level = 2
+	spider(url, path, depth_level)
