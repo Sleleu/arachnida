@@ -1,4 +1,17 @@
 #!/bin/python3
+
+# **************************************************************************** #
+#                                                                              #
+#                                                         :::      ::::::::    #
+#    spider.py                                          :+:      :+:    :+:    #
+#                                                     +:+ +:+         +:+      #
+#    By: sleleu <sleleu@student.42.fr>              +#+  +:+       +#+         #
+#                                                 +#+#+#+#+#+   +#+            #
+#    Created: 2023/09/17 00:26:35 by sleleu            #+#    #+#              #
+#    Updated: 2023/09/17 00:28:08 by sleleu           ###   ########.fr        #
+#                                                                              #
+# **************************************************************************** #
+
 import requests
 import argparse
 import os
@@ -26,6 +39,7 @@ ascii_header = """
                        ░                      
 			Created by : https://github.com/Sleleu
 """
+# Ascii font info : designed by Leigh Purdie and Tim Maggio, March 5, 1994
 
 g_downloaded_files = set()
 g_img_captured = 0
@@ -120,6 +134,7 @@ def parse_arguments():
 	desc = "The spider program allow you to extract all the images from a website, \
 			recursively, by providing a url as a parameter."
 	parser = argparse.ArgumentParser(description=desc)
+	parser.usage = "./spider [-rlp] URL"
 	parser.add_argument("-p", "--path", help="indicates the path where the downloaded files will be saved. If not specified, './data/' will be used.")
 	parser.add_argument("-r", "--recursive", action="store_true", help="recursively downloads the images in a URL received as a parameter")
 	parser.add_argument("-l", "--max-depth", type=int, default=5, help="indicates the maximum depth level of the recursive download. Default is 5.")
