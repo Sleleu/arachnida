@@ -16,7 +16,6 @@ import argparse
 from PIL import Image
 from PIL.ExifTags import TAGS
 
-
 YELLOW = "\033[1;33m"
 RED = "\033[0;31m"
 LIGHT_PURPLE = "\033[1;35m"
@@ -47,19 +46,24 @@ def parse_arguments() -> list:
     return (files)
 
 def printImageInfo(image: Image) -> None:
-    print(f"        {LIGHT_CYAN}--- Image information ---{END}")
     is_animated = getattr(image, "is_animated", False)
     nb_frames = getattr(image, "n_frames", 1)
-    print(f"{LIGHT_GREEN}Format description:{YELLOW}  {image.format_description}{END}")
+    print(f"{LIGHT_GREEN}Format description:{YELLOW}  {image.format_description} | {image.format}{END}")
     print(f"{LIGHT_GREEN}Mode:{YELLOW}                {image.mode}{END}")
     print(f"{LIGHT_GREEN}Size:{YELLOW}                {image.size} (width x height){END}")
     print(f"{LIGHT_GREEN}Color Palette:{YELLOW}       {image.palette}{END}")
     print(f"{LIGHT_GREEN}Is animated:{YELLOW}         {is_animated}{END}")
     print(f"{LIGHT_GREEN}Frames in image:{YELLOW}     {nb_frames}{END}")
+    for tag, data in image.info.items():
+        if isinstance(data, bytes):
+            try:
+                data = data.decode()
+            except:
+                data = "Non readable data"
+        print(f"{LIGHT_GREEN}{tag:20}{YELLOW} {data}{END}")
 
 def printExifInfo(exif_data) -> None:
     if exif_data:
-        print(f"\n{LIGHT_PURPLE}            --- Exif data --- {END}")
         for tag_id in exif_data:
             tag = TAGS.get(tag_id, tag_id) # Transform tag id to human readable string
             data = exif_data.get(tag_id) # Get data from tag id
@@ -71,11 +75,11 @@ def printExifInfo(exif_data) -> None:
 
 def scorpion(file: str) -> None:
     try:
-        image = Image.open(file) # read image data with PIL
+        image = Image.open(file)
     except:
         print(f"{YELLOW}\nCannot open file: {file}{END}\n")
         return
-    print(f"\n    {LIGHT_RED}-|- Extracting metadata for {YELLOW}'{file}'{LIGHT_RED} -|-{END}\n")
+    print(f"\n{LIGHT_RED}|----- Extracting metadata from {YELLOW}'{file}'{LIGHT_RED}-----|\n{END}")
     printImageInfo(image)
     exif_data = image.getexif()
     printExifInfo(exif_data)
