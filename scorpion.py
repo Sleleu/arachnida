@@ -75,14 +75,14 @@ def printExifInfo(exif_data) -> None:
 
 def scorpion(file: str) -> None:
     try:
-        image = Image.open(file)
+        with Image.open(file) as image:
+            print(f"\n{LIGHT_RED}|----- Extracting metadata from {YELLOW}'{file}'{LIGHT_RED}-----|\n{END}")
+            printImageInfo(image)
+            exif_data = image.getexif()
+            printExifInfo(exif_data)
     except:
         print(f"{YELLOW}\nCannot open file: {file}{END}\n")
         return
-    print(f"\n{LIGHT_RED}|----- Extracting metadata from {YELLOW}'{file}'{LIGHT_RED}-----|\n{END}")
-    printImageInfo(image)
-    exif_data = image.getexif()
-    printExifInfo(exif_data)
 
 if __name__ == "__main__":
     print(f"{LIGHT_RED}{ascii_header}{END}")
